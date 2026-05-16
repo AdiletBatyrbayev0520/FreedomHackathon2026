@@ -100,16 +100,32 @@ def run_segmentation(
             n_components=n_umap_components,
             n_neighbors=30,
             min_dist=0.1,
-            random_state=random_state,
-            verbose=False,
+            n_jobs=-1,            # use all 32 cores
+            # NOTE: no random_state — UMAP forces n_jobs=1 with a seed,
+            # making 523k rows take hours. Parallelism > exact reproducibility.
+            verbose=True,
         )
     else:
         from sklearn.decomposition import PCA
         reducer = PCA(n_components=n_umap_components, random_state=random_state)
         logger.info("Using PCA as fallback for dimensionality reduction.")
 
-    logger.info("Fitting dimensionality reducer (UMAP/PCA)...")
-    X_reduced = reducer.fit_transform(X_shap)
+    # Subsample for UMAP fitting — 50k rows captures the manifold structure well.
+    # Full dataset is then transformed using the fitted model.
+    UMAP_FIT_SAMPLE = 50_000
+    n_total = X_shap.shape[0]
+    if n_total > UMAP_FIT_SAMPLE and UMAP_AVAILABLE:
+        logger.info(
+            "Subsampling %d/%d rows for UMAP fit (full dataset will be transformed after).",
+            UMAP_FIT_SAMPLE, n_total,
+        )
+        rng = np.random.RandomState(random_state)
+        fit_idx = rng.choice(n_total, UMAP_FIT_SAMPLE, replace=False)
+        reducer.fit(X_shap[fit_idx])
+        X_reduced = reducer.transform(X_shap)
+    else:
+        logger.info("Fitting dimensionality reducer (UMAP/PCA) on full data...")
+        X_reduced = reducer.fit_transform(X_shap)
 
     # Save reducer
     reducer_path = models_dir / "umap_model.pkl"
@@ -317,11 +333,9 @@ def _plot_umap_2d(
     figures_dir: Path,
 ) -> None:
     """2D UMAP projection colored by segment."""
-    if UMAP_AVAILABLE:
-        reducer_2d = umap.UMAP(n_components=2, n_neighbors=30, min_dist=0.1, random_state=42)
-    else:
-        from sklearn.decomposition import PCA
-        reducer_2d = PCA(n_components=2)
+    # Use PCA for 2D projection — instant vs another hour-long UMAP
+    from sklearn.decomposition import PCA
+    reducer_2d = PCA(n_components=2)
 
     X_2d = reducer_2d.fit_transform(X_shap)
 

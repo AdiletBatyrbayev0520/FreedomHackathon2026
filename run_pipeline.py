@@ -288,31 +288,47 @@ def main():
             cat_cols=["city", "channel", "gender"]
         )
 
-        shap_vals, explainer = compute_shap_values(fs_model, X_test_pd)
-        importance_df = global_feature_importance(shap_vals, feature_names)
-        plot_shap_summary(shap_vals, X_test_pd, feature_names)
-        plot_shap_dependence(shap_vals, X_test_pd, importance_df)
+        # SHAP on 50k subsample (full 523k takes hours)
+        shap_vals, explainer, shap_sample_idx = compute_shap_values(
+            fs_model, X_test_pd, max_samples=50_000,
+        )
+        X_shap_sample = X_test_pd.iloc[shap_sample_idx]
 
-        # Additivity check
+        importance_df = global_feature_importance(shap_vals, feature_names)
+        plot_shap_summary(shap_vals, X_shap_sample, feature_names)
+        plot_shap_dependence(shap_vals, X_shap_sample, importance_df)
+
+        # Full predictions (fast — just model.predict, no SHAP)
         fs_preds = fs_model.predict(X_test_pd)
-        verify_shap_additivity(shap_vals, explainer, fs_preds)
+
+        # Additivity check on the subsampled rows
+        verify_shap_additivity(shap_vals, explainer, fs_preds[shap_sample_idx])
 
     # ─── Task 12: Segmentation ────────────────────────────────────────────────
     with timed_step("Task 12: UMAP + GMM Segmentation"):
         from src.interpretation.segmentation import run_segmentation
 
+        # Use full customer_ids for segment assignment
         customer_ids = test_features["customer_id"].to_list()
 
         # Churn probs for profiling
-        churn_preds = churn_model.predict_proba(X_test_pd)[:, 1]
+        X_test_churn, _, _, _ = prepare_xy(
+            test_features, label_col="churn_label",
+            cat_cols=["city", "channel", "gender"]
+        )
+        churn_preds = churn_model.predict_proba(X_test_churn)[:, 1]
+
+        # Segmentation runs on SHAP subsample (50k) — assigns segments,
+        # then we can assign remaining users to nearest segment via GMM
+        shap_customer_ids = [customer_ids[i] for i in shap_sample_idx]
 
         segments_df = run_segmentation(
             shap_values=shap_vals,
             feature_names=feature_names,
             importance_df=importance_df,
-            customer_ids=customer_ids,
-            freedom_scores=fs_preds,
-            churn_probs=churn_preds,
+            customer_ids=shap_customer_ids,
+            freedom_scores=fs_preds[shap_sample_idx],
+            churn_probs=churn_preds[shap_sample_idx],
             random_state=RANDOM_STATE,
         )
 
@@ -378,8 +394,9 @@ def main():
         prop_score_dfs = {}
         for product, model in propensity_models.items():
             prop_col = f"propensity_{product}"
+            # Must use same label_col as training so features match
             X_pd, _, _, _ = prepare_xy(
-                test_features, label_col=prop_col if prop_col in test_features.columns else "churn_label",
+                test_features, label_col=prop_col,
                 cat_cols=["city", "channel", "gender"]
             )
             scores = model.predict_proba(X_pd)[:, 1]
