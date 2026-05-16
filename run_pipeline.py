@@ -405,8 +405,13 @@ def main():
                 prop_col: scores.tolist(),
             })
 
+        # Add freedom_score_pred to test_features for action matrix in NBA
+        test_features_with_fs = test_features.join(
+            fs_pred_df, on="customer_id", how="left",
+        ).with_columns(pl.col("freedom_score_pred").fill_null(0.0))
+
         nba_df = build_nba(
-            test_features,
+            test_features_with_fs,
             prop_score_dfs,
             churn_pred_df,
         )
@@ -442,6 +447,62 @@ def main():
         for product, df in prop_score_dfs.items():
             all_prop_scores = all_prop_scores.join(df, on="customer_id", how="left")
         all_prop_scores.write_parquet(final_dir / "propensity_scores.parquet")
+
+        # ── Business Metrics (Task 14/18) ──────────────────────────────────
+        import numpy as np
+
+        nba_data = nba_df
+        if "priority_segment" in nba_data.columns:
+            seg_counts = nba_data.group_by("priority_segment").agg(pl.len().alias("cnt"))
+            action_matrix = {}
+            for row in seg_counts.iter_rows(named=True):
+                action_matrix[row["priority_segment"]] = {
+                    "count": int(row["cnt"]),
+                    "pct": round(row["cnt"] / nba_data.height * 100, 1),
+                }
+
+            # Conversion uplift
+            prop_vals = nba_data["propensity_score"].to_numpy()
+            q90 = np.quantile(prop_vals, 0.9) if len(prop_vals) > 0 else 0
+            top_decile = prop_vals[prop_vals >= q90]
+            np.random.seed(42)
+            rand_sample = np.random.choice(prop_vals, size=len(top_decile), replace=False)
+            conversion_uplift = float(top_decile.mean() / max(rand_sample.mean(), 1e-6))
+
+            # Retention value at risk
+            if "Persuadable" in action_matrix:
+                persuadables = nba_data.filter(pl.col("priority_segment") == "Persuadable")
+                p_churn = persuadables["churn_prob"].to_numpy()
+                # Use expected_value as proxy for freedom_score * churn
+                if "expected_value" in persuadables.columns:
+                    retention_val = float(persuadables["expected_value"].sum())
+                else:
+                    retention_val = 0.0
+            else:
+                retention_val = 0.0
+
+            # Budget efficiency
+            if "expected_value" in nba_data.columns:
+                ev_vals = nba_data["expected_value"].to_numpy()
+                ev_sorted = np.sort(ev_vals)[::-1]
+                top20 = ev_sorted[:int(0.2 * len(ev_sorted))]
+                budget_conc = float(top20.sum() / max(ev_vals.sum(), 1e-6) * 100)
+            else:
+                budget_conc = 0.0
+
+            biz_metrics = {
+                "total_users": int(nba_data.height),
+                "action_matrix": action_matrix,
+                "conversion_uplift_top_decile": round(conversion_uplift, 2),
+                "retention_value_at_risk": round(retention_val, 2),
+                "retention_uplift_30pct": round(retention_val * 0.3, 2),
+                "budget_concentration_top20pct": round(budget_conc, 1),
+            }
+
+            biz_path = Path("reports") / "business_metrics.json"
+            with open(biz_path, "w") as f:
+                json.dump(biz_metrics, f, indent=2)
+            logger.info("Business metrics saved to %s", biz_path)
 
         logger.info("Final outputs saved to data/final/")
 

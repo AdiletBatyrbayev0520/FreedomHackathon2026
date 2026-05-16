@@ -19,6 +19,7 @@ import logging
 from pathlib import Path
 
 import polars as pl
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -98,14 +99,44 @@ def build_nba(
             how="left",
         )
 
+    # Join freedom score predictions if available
+    if "freedom_score_pred" in feature_df.columns:
+        result = result.join(
+            feature_df.select(["customer_id", "freedom_score_pred"]),
+            on="customer_id", how="left",
+        ).with_columns(pl.col("freedom_score_pred").fill_null(0.0))
+    else:
+        result = result.with_columns(pl.lit(0.0).alias("freedom_score_pred"))
+
     # -----------------------------------------------------------------------
     # Apply business rules and pick top recommendation
     # -----------------------------------------------------------------------
     all_products = list(propensity_scores.keys())
 
+    # Avg revenue per product (for expected_value calculation)
+    AVG_REVENUE_PER_PRODUCT = {
+        "card": 15000.0,
+        "freedom_rating": 5000.0,
+        "frhc": 20000.0,
+        "deposit": 10000.0,
+        "loan": 50000.0,
+        "liveness": 2000.0,
+    }
+
+    # Freedom score median for action matrix
+    fs_vals = result["freedom_score_pred"].to_numpy()
+    fs_median = float(np.median(fs_vals))
+    CHURN_THRESHOLD = 0.7
+    logger.info(
+        "Action matrix thresholds: churn=%.2f  fs_median=%.4f",
+        CHURN_THRESHOLD, fs_median,
+    )
+
     def pick_recommendation(row: dict) -> dict:
         age = row.get("customer_age", 18) or 18
+        churn_prob = row.get("churn_prob", 0.0) or 0.0
         churn_flagged = row.get("churn_flagged", False)
+        fs_pred = row.get("freedom_score_pred", 0.0) or 0.0
         best_product = None
         best_score = -1.0
 
@@ -131,9 +162,50 @@ def build_nba(
                 best_score = score
                 best_product = product
 
+        # Priority segment (action matrix)
+        high_churn = churn_prob > CHURN_THRESHOLD
+        high_value = fs_pred >= fs_median
+
+        if churn_flagged:
+            priority_segment = "Retention"
+            channel = "push"
+            timing = "day_14"
+            budget_priority = "HIGH"
+            best_product = "retention"
+            best_score = 0.0
+        elif not high_churn and high_value:
+            priority_segment = "VIP"
+            channel = "in_app"
+            timing = "trigger_based"
+            budget_priority = "LOW"
+        elif high_churn and high_value:
+            priority_segment = "Persuadable"
+            channel = "push"
+            timing = "day_14"
+            budget_priority = "HIGH"
+        elif high_churn and not high_value:
+            priority_segment = "Inactive"
+            channel = "email"
+            timing = "day_30"
+            budget_priority = "MINIMAL"
+        else:
+            priority_segment = "Standard"
+            channel = "in_app"
+            timing = "trigger_based"
+            budget_priority = "LOW"
+
+        product_for_ev = best_product or "retention"
+        avg_rev = AVG_REVENUE_PER_PRODUCT.get(product_for_ev, 0.0)
+        expected_value = best_score * avg_rev if best_product else 0.0
+
         return {
             "recommended_product": best_product or "retention",
             "propensity_score": best_score if best_product else 0.0,
+            "expected_value": round(expected_value, 2),
+            "priority_segment": priority_segment,
+            "channel": channel,
+            "timing": timing,
+            "budget_priority": budget_priority,
         }
 
     rows = result.to_dicts()
@@ -141,13 +213,13 @@ def build_nba(
 
     rec_df = pl.DataFrame(recs)
     result = pl.concat(
-        [result.select(["customer_id", "churn_flagged", "churn_prob"]), rec_df],
+        [result.select(["customer_id", "churn_prob"]), rec_df],
         how="horizontal",
     )
 
     # Add display reason
     result = result.with_columns(
-        pl.when(pl.col("churn_flagged"))
+        pl.when(pl.col("priority_segment") == "Retention")
         .then(pl.lit("Retention priority: high churn risk"))
         .when(pl.col("recommended_product") == "retention")
         .then(pl.lit("No eligible products found"))

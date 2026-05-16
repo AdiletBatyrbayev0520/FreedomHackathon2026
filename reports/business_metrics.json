@@ -1,0 +1,34 @@
+{
+  "total_users": 523340,
+  "action_matrix": {
+    "VIP": {
+      "count": 149892,
+      "pct": 28.6
+    },
+    "Persuadable": {
+      "count": 111900,
+      "pct": 21.4
+    },
+    "Inactive": {
+      "count": 260383,
+      "pct": 49.8
+    },
+    "Standard": {
+      "count": 1165,
+      "pct": 0.2
+    }
+  },
+  "retention_value_at_risk": 2934.79,
+  "retention_uplift_30pct": 880.44,
+  "conversion_uplift_top_decile": 6.89,
+  "budget_concentration_top20pct": 96.0,
+  "freedom_score_stats": {
+    "mean": 0.0765,
+    "median": 0.0007,
+    "zero_pct": 0.0
+  },
+  "churn_stats": {
+    "mean_prob": 0.7503,
+    "high_churn_pct": 71.1
+  }
+}
