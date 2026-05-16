@@ -32,6 +32,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger("pipeline")
 
+# ─── Parallelism config ───────────────────────────────────────────────────────
+import os
+_N_CORES = os.cpu_count() or 32
+os.environ.setdefault("POLARS_MAX_THREADS", str(_N_CORES))   # Polars feature engineering
+os.environ.setdefault("OMP_NUM_THREADS", str(_N_CORES))       # NumPy / scikit-learn BLAS
+os.environ.setdefault("OPENBLAS_NUM_THREADS", str(_N_CORES))
+logger.info("Parallelism: %d CPU cores | GPU: RTX 5090 | task_type=GPU for all CatBoost models", _N_CORES)
+
+
 
 def timed_step(name: str):
     """Context manager for timing and logging pipeline steps."""
@@ -54,6 +63,27 @@ def timed_step(name: str):
             raise
 
     return _ctx()
+
+
+def _fill_null_labels(df, propensity_columns: list[str]):
+    """
+    Fill null label columns after left-joining labels to features.
+
+    Semantics:
+      freedom_score_target = 0.0  → user generated no revenue/activity
+      churn_label = 1             → user was already inactive (never transacted)
+      propensity_* = 0            → no product activation observed
+    """
+    import polars as pl
+
+    if "freedom_score_target" in df.columns:
+        df = df.with_columns(pl.col("freedom_score_target").fill_null(0.0))
+    if "churn_label" in df.columns:
+        df = df.with_columns(pl.col("churn_label").fill_null(1))
+    for col in propensity_columns:
+        if col != "customer_id" and col in df.columns:
+            df = df.with_columns(pl.col(col).fill_null(0))
+    return df
 
 
 def main():
@@ -162,10 +192,17 @@ def main():
         save_labels(churn_labels, "T")
         save_label_diagnostics(churn_labels, freedom_labels, propensity_labels)
 
+        import polars as pl
+
         # Join labels to test features
+        # fill_null rationale: 322k users (61%) have NO transactions →
+        #   freedom_score_target=0 (no value generated)
+        #   churn_label=1 (already inactive — never transacted)
+        #   propensity_*=0 (no product activation observed)
         test_features = test_features.join(churn_labels, on="customer_id", how="left")
         test_features = test_features.join(freedom_labels, on="customer_id", how="left")
         test_features = test_features.join(propensity_labels, on="customer_id", how="left")
+        test_features = _fill_null_labels(test_features, propensity_labels.columns)
 
         # Val labels
         churn_labels_val = build_churn_label(
@@ -180,6 +217,7 @@ def main():
         val_features = val_features.join(churn_labels_val, on="customer_id", how="left")
         val_features = val_features.join(freedom_labels_val, on="customer_id", how="left")
         val_features = val_features.join(propensity_labels_val, on="customer_id", how="left")
+        val_features = _fill_null_labels(val_features, propensity_labels_val.columns)
 
         # Train labels
         churn_labels_train = build_churn_label(
@@ -194,6 +232,16 @@ def main():
         train_features = train_features.join(churn_labels_train, on="customer_id", how="left")
         train_features = train_features.join(freedom_labels_train, on="customer_id", how="left")
         train_features = train_features.join(propensity_labels_train, on="customer_id", how="left")
+        train_features = _fill_null_labels(train_features, propensity_labels_train.columns)
+
+        # Log null counts after fill
+        for split_name, split_df in [("train", train_features), ("val", val_features), ("test", test_features)]:
+            fs_nulls = split_df["freedom_score_target"].null_count()
+            ch_nulls = split_df["churn_label"].null_count()
+            logger.info(
+                "[%s] After label fill: freedom_score nulls=%d  churn nulls=%d",
+                split_name, fs_nulls, ch_nulls,
+            )
 
     if args.skip_models:
         logger.info("--skip-models flag set. Stopping before Task 8.")

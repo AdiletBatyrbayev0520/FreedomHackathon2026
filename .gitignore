@@ -19,7 +19,7 @@ data/*
 # data/processed/ is intentionally NOT ignored
 
 # ML model artifacts (large binary files)
-models/
+/models/
 
 # Pipeline outputs
 *.cbm

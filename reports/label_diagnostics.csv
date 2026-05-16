@@ -1,0 +1,9 @@
+label,type,n_users,positive_count,positive_rate,zero_pct,mean,std
+churn_label,binary,201063,88376,0.4395438245723977,,,
+freedom_score_target,continuous,201063,,,55.104121593729325,0.16906448009795758,0.21945157914576346
+propensity_card,binary,517321,36398,0.0703586361272788,,,
+propensity_freedom_rating,binary,517321,14,0.00002706250084570315,,,
+propensity_frhc,binary,517321,33813,0.06536173864969719,,,
+propensity_deposit,binary,517321,4295,0.008302388652306788,,,
+propensity_loan,binary,517321,0,0.0,,,
+propensity_liveness,binary,517321,55345,0.10698386495038864,,,

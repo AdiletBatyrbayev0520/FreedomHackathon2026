@@ -1,0 +1,30 @@
+{
+  "card": {
+    "product": "card",
+    "auc_roc": 0.9883736373566934,
+    "auc_pr": 0.9541726957676968,
+    "precision_at_10pct": 0.6562273092062522,
+    "baseline_positive_rate": 0.06954943249130584
+  },
+  "frhc": {
+    "product": "frhc",
+    "auc_roc": 0.9981235165783023,
+    "auc_pr": 0.9861457717869733,
+    "precision_at_10pct": 0.6396415332288761,
+    "baseline_positive_rate": 0.06461000496808958
+  },
+  "deposit": {
+    "product": "deposit",
+    "auc_roc": 0.968891068648048,
+    "auc_pr": 0.579767546988058,
+    "precision_at_10pct": 0.07408185882982382,
+    "baseline_positive_rate": 0.008206901822906714
+  },
+  "liveness": {
+    "product": "liveness",
+    "auc_roc": 0.9066942030831109,
+    "auc_pr": 0.7714551159906637,
+    "precision_at_10pct": 0.7027935949860511,
+    "baseline_positive_rate": 0.10571521381893224
+  }
+}

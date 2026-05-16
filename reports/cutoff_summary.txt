@@ -1,0 +1,21 @@
+FreedomProfile Analytics Pipeline — Cutoff Strategy
+============================================================
+
+Standard cutoff strategy:
+  data_end = max(transactions.transaction_date) = 2026-05-12
+  T (test cutoff)       = data_end − 14d = 2026-04-28
+  T_minus_1 (val cutoff)  = T − 30d = 2026-03-29
+  T_minus_2 (train cutoff) = T−1 − 30d = 2026-02-27
+  Label window = 14 days (compact due to narrow data window)
+  Train data:  all rows with date < 2026-02-27
+  Val data:    rows in [2026-02-27, 2026-03-29)
+  Test data:   rows in [2026-03-29, 2026-04-28)
+  Labels built from:  [2026-04-28, 2026-05-12)
+
+
+For presentation slide 'Limitations':
+  - Training data spans only ~57 days
+    (FreedomSuperApp launched 2026-01-01, data through 2026-05-12)
+  - Short window limits seasonal pattern capture
+  - Label window reduced to 14d (vs. standard 30d) to
+    preserve train/val/test split integrity

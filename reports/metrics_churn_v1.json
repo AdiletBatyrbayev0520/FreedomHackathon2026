@@ -1,0 +1,23 @@
+{
+  "val": {
+    "split": "val",
+    "auc_roc": 0.9838788632224158,
+    "auc_pr": 0.9959944290301865,
+    "f1_at_threshold": 0.9622439218092883,
+    "threshold": 0.18895859094252465,
+    "precision_at_10pct": 1.0,
+    "recall_at_10pct": 0.12553521697726241,
+    "baseline_positive_rate": 0.7965892154240073
+  },
+  "test": {
+    "split": "test",
+    "auc_roc": 0.9884140751562275,
+    "auc_pr": 0.9968299940729892,
+    "f1_at_threshold": 0.9688788301002081,
+    "threshold": 0.18895859094252465,
+    "precision_at_10pct": 1.0,
+    "recall_at_10pct": 0.12743875712268057,
+    "baseline_positive_rate": 0.7846906408835557
+  },
+  "optimal_threshold": 0.18895859094252465
+}
