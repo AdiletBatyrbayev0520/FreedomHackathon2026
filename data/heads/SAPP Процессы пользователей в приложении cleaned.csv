@@ -1,4 +1,4 @@
-"customer_id","process_code","lang","status","started_at","completed_at"
+customer_id,process_code,lang,status,started_at,completed_at
 971302.0,LivenessProcess,RU,ERROR,2025-01-09 13:56:17.737,2025-01-09 13:57:38.282
 970874.0,CustomerRegistrationProcess,RU,DECLINED,2025-01-09 14:04:06.858,2025-01-09 14:08:58.462
 965574.0,CustomerRegistrationProcess,RU,ERROR,2025-01-08 21:42:00.916,2025-01-08 21:53:34.064
