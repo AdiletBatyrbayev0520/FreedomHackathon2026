@@ -100,14 +100,18 @@ def prepare_xy(
     import polars as pl
     import pandas as pd
 
+    from src.features.validation import FEATURE_COLUMNS
+
     exclude = set(exclude_cols or []) | {"customer_id", label_col}
 
+    # Intersect with whitelist to ensure NO labels get through
+    valid_features = [c for c in feature_df.columns if c in FEATURE_COLUMNS and c not in exclude]
+
     _, cat_feature_names = get_numeric_and_cat_cols(
-        feature_df, cat_cols=cat_cols, exclude_cols=list(exclude)
+        feature_df, cat_cols=cat_cols, exclude_cols=list(set(feature_df.columns) - set(valid_features))
     )
 
-    feature_cols = [c for c in feature_df.columns if c not in exclude]
-    X = feature_df.select(feature_cols).to_pandas()
+    X = feature_df.select(valid_features).to_pandas()
 
     # CatBoost needs string type for categoricals
     for col in cat_feature_names:
@@ -116,4 +120,4 @@ def prepare_xy(
 
     y = feature_df[label_col].to_numpy()
 
-    return X, y, feature_cols, cat_feature_names
+    return X, y, valid_features, cat_feature_names

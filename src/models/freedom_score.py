@@ -58,18 +58,21 @@ def train_freedom_score(
 
     logger.info("Preparing training data for Freedom Score model...")
     X_train, y_train, feature_names, cat_feature_names = prepare_xy(
-        train_df, label_col=label_col, cat_cols=CAT_FEATURES
+        train_df, label_col=label_col, cat_cols=CAT_FEATURES, exclude_cols=EXCLUDE_COLS
     )
     X_val, y_val, _, _ = prepare_xy(
-        val_df, label_col=label_col, cat_cols=CAT_FEATURES
+        val_df, label_col=label_col, cat_cols=CAT_FEATURES, exclude_cols=EXCLUDE_COLS
     )
     X_test, y_test, _, _ = prepare_xy(
-        test_df, label_col=label_col, cat_cols=CAT_FEATURES
+        test_df, label_col=label_col, cat_cols=CAT_FEATURES, exclude_cols=EXCLUDE_COLS
     )
+
+    from src.features.validation import assert_no_label_leakage
+    assert_no_label_leakage(X_train, "Freedom Score")
 
     logger.info(
         "Train: %d rows | Val: %d rows | Test: %d rows | Features: %d",
-        len(X_train), len(X_val), len(X_test), len(feature_names),
+        len(X_train), len(X_val), len(X_test), len(feature_names)
     )
 
     model = CatBoostRegressor(
@@ -122,8 +125,8 @@ def train_freedom_score(
         logger.info("[OK] Spearman ρ=%.4f on test (target: >0.4)", spearman)
 
     all_metrics = {"val": val_metrics, "test": test_metrics}
-    save_metrics(all_metrics, reports_dir / "metrics_freedom_score.json")
-    save_model(model, models_dir / "freedom_score.cbm")
+    save_metrics(all_metrics, reports_dir / "metrics_freedom_score_v2.json")
+    save_model(model, models_dir / "freedom_score_v2.cbm")
 
     # Plots
     y_pred_test = model.predict(X_test)

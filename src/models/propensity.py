@@ -81,6 +81,9 @@ def train_propensity(
         X_val, y_val, _, _ = prepare_xy(val_df, label_col=label_col, cat_cols=CAT_FEATURES)
         X_test, y_test, _, _ = prepare_xy(test_df, label_col=label_col, cat_cols=CAT_FEATURES)
 
+        from src.features.validation import assert_no_label_leakage
+        assert_no_label_leakage(X_train, f"Propensity ({product})")
+
         model = CatBoostClassifier(
             iterations=3000,
             learning_rate=0.05,
@@ -122,12 +125,12 @@ def train_propensity(
             )
             continue
 
-        save_model(model, models_dir / f"propensity_{product}.cbm")
+        save_model(model, models_dir / f"propensity_v2_{product}.cbm")
         models[product] = model
         plot_data[product] = {"y_test": y_test, "test_probs": test_probs, "metrics": metrics}
 
-    save_metrics(all_metrics, reports_dir / "metrics_propensity.json")
-    _plot_propensity_summary(plot_data, figures_dir / "propensity_per_product.png")
+    save_metrics(all_metrics, reports_dir / "metrics_propensity_v2.json")
+    _plot_propensity_summary(plot_data, figures_dir / "propensity_v2_per_product.png")
 
     return models
 

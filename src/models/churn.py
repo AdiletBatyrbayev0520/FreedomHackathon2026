@@ -66,6 +66,9 @@ def train_churn(
     X_val, y_val, _, _ = prepare_xy(val_df, label_col=label_col, cat_cols=CAT_FEATURES)
     X_test, y_test, _, _ = prepare_xy(test_df, label_col=label_col, cat_cols=CAT_FEATURES)
 
+    from src.features.validation import assert_no_label_leakage
+    assert_no_label_leakage(X_train, f"Churn ({model_suffix})")
+
     logger.info(
         "Train: %d rows (%.1f%% positive) | Val: %d | Test: %d | Features: %d",
         len(X_train), y_train.mean() * 100,

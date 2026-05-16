@@ -261,7 +261,7 @@ def main():
         from src.models.churn import train_churn
         churn_model = train_churn(
             train_features, val_features, test_features,
-            model_suffix="v1",
+            model_suffix="v1_fixed",
             random_state=RANDOM_STATE,
         )
 
@@ -373,7 +373,7 @@ def main():
 
         churn_model_v2 = train_churn(
             train_v2, val_v2, test_v2,
-            model_suffix="v2",
+            model_suffix="v2_fixed",
             random_state=RANDOM_STATE,
         )
 
