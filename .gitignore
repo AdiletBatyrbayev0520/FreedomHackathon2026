@@ -5,10 +5,33 @@ build/
 dist/
 wheels/
 *.egg-info
+.ipynb_checkpoints/
 
 # Virtual environments
 .venv
-data/*
-!data/heads/
 
+# Raw and interim data (large files, not for git)
+data/*
+!data/heads
+
+
+# But keep processed data (cleaned CSVs — tracked as ground truth)
+# data/processed/ is intentionally NOT ignored
+
+# ML model artifacts (large binary files)
+models/
+
+# Pipeline outputs
+*.cbm
+*.pkl
+pipeline.log
+
+# IDE
 .idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+*.pytest_cache/

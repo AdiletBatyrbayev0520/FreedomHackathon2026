@@ -1,0 +1,32 @@
+table,column,dtype,n_rows,null_count,null_pct,n_unique
+users,city,String,523340,0,0.0,17
+users,customer_id,Int64,523340,0,0.0,523340
+users,gender,String,523340,0,0.0,2
+users,customer_age,Int32,523340,0,0.0,89
+users,reg_date,Date,523340,0,0.0,133
+transactions,transaction_date,Date,5408714,0,0.0,132
+transactions,transaction_id,String,5408714,0,0.0,5408714
+transactions,operation_type,String,5408714,0,0.0,10
+transactions,transaction_status,String,5408714,0,0.0,39
+transactions,mcc,String,5408714,0,0.0,371
+transactions,terminal_type,String,5408714,0,0.0,3
+transactions,customer_id,Int64,5408714,0,0.0,201063
+transactions,transaction_sum,Float64,5408714,0,0.0,246472
+transactions,transaction_sum_was_missing,Boolean,5408714,0,0.0,2
+transactions,transaction_status_clean,String,5408714,0,0.0,3
+events,customer_id,Int64,9499815,0,0.0,517321
+events,process_code,String,9499815,0,0.0,87
+events,lang,String,9499815,0,0.0,3
+events,status,String,9499815,0,0.0,9
+events,started_at,"Datetime(time_unit='us', time_zone=None)",9499815,0,0.0,9486392
+events,completed_at,"Datetime(time_unit='us', time_zone=None)",9499815,327690,3.45,8994079
+partner_purchases,purchase_date,Date,207580,0,0.0,300
+partner_purchases,remote_flag,String,207580,0,0.0,2
+partner_purchases,customer_id,Int64,207580,0,0.0,96062
+partner_purchases,counter,Int32,207580,0,0.0,34
+partner_purchases,purchase_amount_real,Float64,207580,0,0.0,61561
+partner_purchases,cashback_amount_real,Float64,207580,0,0.0,77896
+partner_purchases,cashback_rate,Float64,207580,0,0.0,38000
+partner_purchases,app_name_normalized,String,207580,0,0.0,15
+acquisition,secondary_category_filled,String,525208,0,0.0,13
+acquisition,customer_id,Int64,525208,0,0.0,525207

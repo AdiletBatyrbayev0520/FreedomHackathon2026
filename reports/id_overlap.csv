@@ -1,0 +1,5 @@
+table,users_unique_ids,other_unique_ids,intersection_ids,overlap_pct,orphan_ids_in_other,orphan_rows_in_other,orphan_rows_pct,users_without_any_row
+transactions,523340,201063,200785,38.37,278,569,0.01,322555
+events,523340,517321,515438,98.49,1883,23254,0.24,7902
+partner_purchases,523340,96062,95848,18.31,214,225,0.11,427492
+acquisition,523340,525207,523313,99.99,1894,1894,0.36,27
